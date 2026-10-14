@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>X-Weathering</title>
+<style>
+  :root { --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --muted:#52637a; --teal:#0f766e; --line:#e2e8f0; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 "Segoe UI", system-ui, sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px 32px; max-width:460px; width:100%; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+  h1 { margin:0 0 6px; font-size:22px; } h1 b { color:var(--teal); font-style:italic; }
+  p { margin:8px 0; color:var(--muted); } .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--teal); margin-right:8px; animation:p 1.2s infinite; }
+  @keyframes p { 50% { opacity:.3 } } a { color:var(--teal); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><b>X</b>-Weathering</h1>
+  <p id="msg"><span class="dot"></span>Opening the app…</p>
+  <p id="sub" style="font-size:13px"></p>
+</div>
+<script>
+// Fixed address for X-Weathering. The app runs on a Calypso PC behind a temporary link that can change;
+// link.json in this repository always holds the current one (updated automatically). This page forwards to it.
+const REPO = "YannDLM-Calypso/x-weathering";
+const msg = document.getElementById("msg"), sub = document.getElementById("sub");
+async function currentLink() {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/link.json?ts=${Date.now()}`, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+    if (r.ok) return await r.json();
+  } catch (e) {}
+  const r2 = await fetch(`link.json?ts=${Date.now()}`, { cache: "no-store" });
+  return await r2.json();
+}
+async function alive(url) {
+  try { await fetch(url + "/api/health?ts=" + Date.now(), { mode: "no-cors", cache: "no-store" }); return true; } catch (e) { return false; }
+}
+async function go(attempt) {
+  try {
+    const l = await currentLink();
+    if (l && l.url && await alive(l.url)) { location.replace(l.url + location.hash.replace(/^#/, "")); return; }
+    msg.innerHTML = '<span class="dot"></span>The app is restarting or offline. Trying again…';
+    sub.textContent = l && l.updated ? `Last link: ${new Date(l.updated).toLocaleString()}. It comes back by itself within a few minutes while the host PC is on.` : "";
+  } catch (e) { msg.innerHTML = '<span class="dot"></span>Looking for the app…'; }
+  setTimeout(() => go(attempt + 1), 15000);
+}
+go(0);
+</script>
+</body>
+</html>
